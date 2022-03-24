@@ -1,177 +1,83 @@
-//import { coinFlip, coinFlips, flipACoin, countFlips } from './modules/coin.mjs'
-// Require Express.js
-const express = require('express')
-const app = express()
+// Define app using express
+var express = require("express")
+var app = express()
+// Require database SCRIPT file
+const db = require("./database.js")
+// Require md5 MODULE
+//var md5 = require("md5")
+// Make Express use its own built-in body parser for both urlencoded and JSON body data.
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-const args = require("minimist")(process.argv.slice(2))
-// Define allowed argument name 'port'.
-args["port"]
-
-const HTTP_PORT = args.port || process.env.port || 3000
-
-// Start an app server
+// Server port
+var HTTP_PORT = 5000 
+// Start server
 const server = app.listen(HTTP_PORT, () => {
-    console.log('App listening on port %PORT%'.replace('%PORT%',HTTP_PORT))
+    console.log("Server running on port %PORT%".replace("%PORT%",HTTP_PORT))
+});
+// READ (HTTP method GET) at root endpoint /app/
+app.get("/app/", (req, res, next) => {
+    res.json({"message":"Your API works! (200)"});
+	res.status(200);
 });
 
-app.get('/app/', (req, res) => {
-    // Respond with status 200
-        res.statusCode = 200;
-    // Respond with status message "OK"
-        res.statusMessage = 'OK';
-        res.writeHead( res.statusCode, { 'Content-Type' : 'text/plain' });
-        res.end(res.statusCode+ ' ' +res.statusMessage)
+// Define other CRUD API endpoints using express.js and better-sqlite3
+// CREATE a new user (HTTP method POST) at endpoint /app/new/
+app.post("/app/new/user", (req, res, next) => {
+    let data = {
+        user: req.body.username,
+        pass: req.body.password
+    }
+    const stmt = db.prepare('INSERT INTO userinfo (username, password) VALUES (?, ?)')
+    const info = stmt.run(data.user, data.pass)
+    res.status(200).json(info)
+});
+// READ a list of users (HTTP method GET) at endpoint /app/users/
+app.get("/app/users", (req, res) => {	
+    try {
+        const stmt = db.prepare('SELECT * FROM userinfo').all()
+        res.status(200).json(stmt)
+    } catch {
+        console.error(e)
+    }
 });
 
-app.get('/app/flip/', (req, res) => {
-    result = coinFlip();
-    res.status(200).json({"flip": result})
-});
-
-app.get('/app/flips/:number', (req, res) => {
-    const flips = coinFlips(req.params.number)
-    const count = countFlips(flips);
-    res.status(200).json({"raw":flips, "summary": {"heads": count, "tails": flips.length-count}})
-});
-
-app.get('/app/flip/call/heads', (req, res) => {
-    const game = flipACoin("heads");
-    coinResult = coinFlip();
-
-    if (coinResult === "heads") {
-        result = 'win';
-    } else {
-        result = 'lose'
+// READ a single user (HTTP method GET) at endpoint /app/user/:id
+app.get("/app/user/:id", (req, res) => {
+    try {
+        const stmt = db.prepare('SELECT * FROM userinfo WHERE id = ?').get(req.params.id);
+        res.status(200).json(stmt)
+    } catch (e) {
+        console.error(e)
     }
 
-    res.status(200).json({"call":"heads","flip":coinResult,"result":result});
 });
 
-app.get('/app/flip/call/tails', (req, res) => {
-    const game = flipACoin("tails");
-    coinResult = coinFlip();
-
-    if (coinResult === "heads") {
-        result = 'win';
-    } else {
-        result = 'lose'
+// UPDATE a single user (HTTP method PATCH) at endpoint /app/update/user/:id
+app.patch("/app/update/user/:id", (req, res) => {
+    let data = {
+        user: req.body.username,
+        pass: req.body.password
     }
-
-    res.status(200).json({"call":"tails","flip":coinResult,"result":result});
+    const stmt = db.prepare('UPDATE userinfo SET username = COALESCE(?,username), password = COALESCE(?,password) WHERE id = ?')
+    const info = stmt.run(data.user, data.pass, req.params.id)
+    res.status(200).json(info)
 });
 
-
+// DELETE a single user (HTTP method DELETE) at endpoint /app/delete/user/:id
+app.delete("/app/delete/user/:id", (req, res) => {
+    const stmt = db.prepare('DELETE FROM userinfo WHERE id = ?')
+    const info = stmt.run(req.params.id)
+    res.status(200).json(info)
+});
+// Default response for any other request
 app.use(function(req, res){
-    res.status(404).send('404 NOT FOUND')
+	res.json({"message":"Endpoint not found. (404)"});
+    res.status(404);
 });
 
-
-
-
-
-
-/** Coin flip functions 
- * This module will emulate a coin flip given various conditions as parameters as defined below
- */
-
- /** Simple coin flip
-  * 
-  * Write a function that accepts no parameters but returns either heads or tails at random.
-  * 
-  * @param {*}
-  * @returns {string} 
-  * 
-  * example: coinFlip()
-  * returns: heads
-  * 
-  */
- 
- function coinFlip() {
-   return (Math.floor(Math.random()*2) == 0) ? 'heads' : 'tails';
- }
- 
- /** Multiple coin flips
-  * 
-  * Write a function that accepts one parameter (number of flips) and returns an array of 
-  * resulting "heads" or "tails".
-  * 
-  * @param {number} flips 
-  * @returns {string[]} results
-  * 
-  * example: coinFlips(10)
-  * returns:
-  *  [
-       'heads', 'heads',
-       'heads', 'tails',
-       'heads', 'tails',
-       'tails', 'heads',
-       'tails', 'heads'
-     ]
-  */
- 
- function coinFlips(flips) {
-   let array = new Array();
-   for (let i = 0; i < flips; i++) {
-     array.push(coinFlip());
-   }
-   return array;
- }
- 
- /** Count multiple flips
-  * 
-  * Write a function that accepts an array consisting of "heads" or "tails" 
-  * (e.g. the results of your `coinFlips()` function) and counts each, returning 
-  * an object containing the number of each.
-  * 
-  * example: conutFlips(['heads', 'heads','heads', 'tails','heads', 'tails','tails', 'heads','tails', 'heads'])
-  * { tails: 5, heads: 5 }
-  * 
-  * @param {string[]} array 
-  * @returns {{ heads: number, tails: number }}
-  */
- 
- function countFlips(array) {
-   let headsNum = 0;
-   let tailsNum = 0;
-   array.forEach(element => {
-     if (element === 'heads') {
-       headsNum++;
-     } else {
-       tailsNum++;
-     }
-   });
-   return headsNum;
- }
- 
- /** Flip a coin!
-  * 
-  * Write a function that accepts one input parameter: a string either "heads" or "tails", flips a coin, and then records "win" or "lose". 
-  * 
-  * @param {string} call 
-  * @returns {object} with keys that are the input param (heads or tails), a flip (heads or tails), and the result (win or lose). See below example.
-  * 
-  * example: flipACoin('tails')
-  * returns: { call: 'tails', flip: 'heads', result: 'lose' }
-  */
- 
- function flipACoin(call) {
-     let result = '';
-     const coinResult = coinFlip();
- 
-     if (coinResult === call) {
-         result = 'win';
-     } else {
-         result = 'lose'
-     }
- 
-     return "{\"call\":\""+ call +"\",\"flip\":\""+ coinResult+"\",\"result\":\""+result+"\"\\}"
- 
-     
- }
- 
- 
- /** Export 
-  * 
-  * Export all of your named functions
- */
- 
+process.on('SIGTERM', () => {
+    server.close(() => {
+        console.log('Server stopped')
+    })
+})
