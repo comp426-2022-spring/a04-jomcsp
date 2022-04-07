@@ -23,19 +23,28 @@ app.get("/app/", (req, res, next) => {
 
 // Define other CRUD API endpoints using express.js and better-sqlite3
 // CREATE a new user (HTTP method POST) at endpoint /app/new/
-app.post("/app/new/user", (req, res, next) => {
-    let data = {
-        user: req.body.username,
-        pass: req.body.password
+app.post("/app/log", (req, res, next) => {
+    let logdata = {
+        remoteaddr: req.ip,
+        remoteuser: req.user,
+        time: Date.now(),
+        method: req.method,
+        url: req.url,
+        protocol: req.protocol,
+        httpversion: req.httpVersion,
+        status: res.statusCode,
+        referer: req.headers['referer'],
+        useragent: req.headers['user-agent']
     }
-    const stmt = db.prepare('INSERT INTO userinfo (username, password) VALUES (?, ?)')
-    const info = stmt.run(data.user, data.pass)
+
+    const stmt = db.prepare('INSERT INTO accesslog ( remoteaddr, remoteuser, time, method, url, protocol, httpversion, status, referer, useragent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    const info = stmt.run(logdata.remoteaddr, logdata.remoteuser, logdata.time, logdata.method, logdata.url, logdata.protocol, logdata.httpversion, logdata.status, logdata.referer, logdata.useragent)
     res.status(200).json(info)
 });
 // READ a list of users (HTTP method GET) at endpoint /app/users/
-app.get("/app/users", (req, res) => {	
+app.get("/app/log/access", (req, res) => {	
     try {
-        const stmt = db.prepare('SELECT * FROM userinfo').all()
+        const stmt = db.prepare('SELECT * FROM accesslog').all()
         res.status(200).json(stmt)
     } catch {
         console.error(e)
@@ -43,14 +52,9 @@ app.get("/app/users", (req, res) => {
 });
 
 // READ a single user (HTTP method GET) at endpoint /app/user/:id
-app.get("/app/user/:id", (req, res) => {
-    try {
-        const stmt = db.prepare('SELECT * FROM userinfo WHERE id = ?').get(req.params.id);
-        res.status(200).json(stmt)
-    } catch (e) {
-        console.error(e)
-    }
-
+app.get("/app/error", (req, res) => {
+        res.json({"message":"Error test successful."});
+        res.status(200)
 });
 
 // UPDATE a single user (HTTP method PATCH) at endpoint /app/update/user/:id
