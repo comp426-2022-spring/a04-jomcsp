@@ -63,8 +63,8 @@ app.get("/app/log/access", (req, res) => {
 
 // READ a single user (HTTP method GET) at endpoint /app/user/:id
 app.get("/app/error", (req, res) => {
-        res.json({"message":"500 Internal Server Error"});
-        res.status(500)
+        res.json("500 Internal Server Error");
+        res.status(500);
 });
 
 // UPDATE a single user (HTTP method PATCH) at endpoint /app/update/user/:id
