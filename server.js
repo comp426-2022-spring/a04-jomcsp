@@ -81,7 +81,7 @@ app.post("/app/log", (req, res, next) => {
 app.get("/app/log/access", (req, res) => {	
     try {
         const stmt = db.prepare('SELECT * FROM accesslog').all()
-        res.status(200).json(stmt)
+        res.status(200).json("[{id}]")
     } catch {
         console.error(e)
     }
