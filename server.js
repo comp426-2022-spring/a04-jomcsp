@@ -9,11 +9,21 @@ const db = require("./database.js")
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+
+const args = require("minimist")(process.argv.slice(2))
+// Define allowed argument name 'port'.
+args["port"]
+
+// Define a const `port` using the argument from the command line. 
+// Make this const default to port 3000 if there is no argument given for `--port`.
+const port = args.port || process.env.port || 5555
+
+
+
 // Server port
-var HTTP_PORT = 5000 
 // Start server
-const server = app.listen(HTTP_PORT, () => {
-    console.log("Server running on port %PORT%".replace("%PORT%",HTTP_PORT))
+const server = app.listen(port, () => {
+    console.log("Server running on port %PORT%".replace("%PORT%",port))
 });
 // READ (HTTP method GET) at root endpoint /app/
 app.get("/app/", (req, res, next) => {
